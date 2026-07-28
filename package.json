@@ -1,0 +1,20 @@
+{
+  "name": "mamuska-os-mobile",
+  "version": "1.0.0",
+  "description": "Mamuska OS como app web independiente (PWA) — backend propio, sin depender de Cowork.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^2.7.0",
+    "googleapis": "^140.0.1",
+    "intuit-oauth": "^4.1.0",
+    "node-quickbooks": "^2.0.44"
+  }
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1F1D1A">
+<link rel="manifest" href="/manifest.json">
+<title>Mamuska OS</title>
+<style>
+  :root{ --bg:#F7F5F0; --panel:#fff; --border:rgba(31,29,26,.11); --text:#1F1D1A; --dim:#726C63; --yellow:#ffd400; --ok:#2f9e44; --bad:#c0392b;
+    --serif:'Iowan Old Style','Palatino Linotype',Georgia,serif; }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;padding-bottom:70px}
+  h1{font-family:var(--serif);font-size:22px;font-weight:600;margin-bottom:2px}
+  .top{padding:18px 16px 10px}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:10px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin:0 16px 12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 4px}
+  .kpi{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .kpi .n{font-family:var(--serif);font-size:20px;font-weight:600}
+  .kpi .l{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  .brain{background:#1F1D1A;color:#fff;border-radius:14px;margin:0 16px 14px;padding:14px}
+  .brain .bt{font-size:11px;color:var(--yellow);font-weight:700;letter-spacing:1px;margin-bottom:8px}
+  .brain textarea{width:100%;background:#2c2a26;border:1px solid #3a3833;color:#fff;border-radius:9px;padding:10px;font-size:14px;min-height:44px;resize:vertical}
+  .brain button{margin-top:8px;background:var(--yellow);color:#1F1D1A;border:none;border-radius:8px;padding:10px 16px;font-weight:700;width:100%}
+  .brain .out{margin-top:10px;background:#000;border-radius:9px;padding:10px;font-size:13px;white-space:pre-wrap;display:none;max-height:220px;overflow:auto}
+  .nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--panel);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .nav button{flex:1;background:none;border:none;font-size:11px;color:var(--dim);padding:6px 2px}
+  .nav button.active{color:var(--text);font-weight:700}
+  .list-item{border-bottom:1px solid var(--border);padding:9px 0;font-size:13.5px}
+  .list-item .t{font-weight:700}
+  .list-item .m{color:var(--dim);font-size:11.5px}
+  .empty{color:var(--dim);font-size:12.5px;text-align:center;padding:16px}
+  .view{display:none}.view.on{display:block}
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;z-index:10}
+  #gate input{padding:12px;border:1px solid var(--border);border-radius:8px;width:240px;font-size:15px}
+  #gate button{padding:12px 20px;background:var(--yellow);border:none;border-radius:8px;font-weight:700}
+  #gate .err{color:var(--bad);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1>Mamuska OS</h1>
+  <div class="sub">Ingresá la clave de acceso</div>
+  <input type="password" id="pw" placeholder="Clave">
+  <button id="pwGo">Entrar</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div class="top">
+  <h1>Mamuska OS</h1>
+  <div class="sub" id="todaySub"></div>
+</div>
+
+<div class="row" id="kpis"></div>
+
+<div class="brain">
+  <div class="bt">MAMUSKA BRAIN</div>
+  <textarea id="brainInput" placeholder='Ej: "Nike pagó 3000 dólares"'></textarea>
+  <button id="brainGo">Ejecutar</button>
+  <div class="out" id="brainOut"></div>
+</div>
+
+<section class="view on" id="v-dash">
+  <div class="card"><strong>Proyectos activos</strong><div id="projList"></div></div>
+</section>
+<section class="view" id="v-leads">
+  <div class="card"><strong>Pipeline comercial</strong><div id="leadList"></div></div>
+</section>
+<section class="view" id="v-tasks">
+  <div class="card"><strong>Tareas</strong><div id="taskList"></div></div>
+</section>
+
+<div class="nav">
+  <button class="active" data-v="dash">Resumen</button>
+  <button data-v="leads">Comercial</button>
+  <button data-v="tasks">Tareas</button>
+</div>
+
+<script>
+const PW_KEY='mamuska_pw';
+let PW=localStorage.getItem(PW_KEY)||'';
+
+async function api(path, opts={}){
+  const r=await fetch(path, {...opts, headers:{...(opts.headers||{}),'x-app-password':PW,'content-type':'application/json'}});
+  if(r.status===401){ document.getElementById('gate').style.display='flex'; throw new Error('Clave incorrecta'); }
+  return r.json();
+}
+document.getElementById('pwGo').onclick=async()=>{
+  PW=document.getElementById('pw').value;
+  try{
+    const r=await fetch('/api/data/summary',{headers:{'x-app-password':PW}});
+    if(r.status===401){ document.getElementById('pwErr').textContent='Clave incorrecta'; return; }
+    localStorage.setItem(PW_KEY,PW);
+    document.getElementById('gate').style.display='none';
+    boot();
+  }catch(e){ document.getElementById('pwErr').textContent='Error de conexión'; }
+};
+if(PW) document.getElementById('gate').style.display='none';
+
+function fmt(n){ return '$'+(Number(n)||0).toLocaleString('en-US'); }
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function boot(){
+  document.getElementById('todaySub').textContent=new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  try{
+    const s=await api('/api/data/summary');
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="n">'+s.clientes+'</div><div class="l">Clientes</div></div>'+
+      '<div class="kpi"><div class="n">'+fmt(s.facturacion)+'</div><div class="l">Facturado</div></div>'+
+      '<div class="kpi"><div class="n">'+fmt(s.cobrado)+'</div><div class="l">Cobrado</div></div>'+
+      '<div class="kpi"><div class="n">'+s.tareasAbiertas+'</div><div class="l">Tareas</div></div>';
+    document.getElementById('projList').innerHTML=s.proyectos.length? s.proyectos.map(p=>
+      '<div class="list-item"><div class="t">'+esc(p.nombre)+'</div><div class="m">'+esc(p.etapa)+' · '+fmt(p.presupuesto)+(p.entrega?' · entrega '+p.entrega:'')+'</div></div>'
+    ).join('') : '<div class="empty">Sin proyectos activos</div>';
+  }catch(e){}
+  try{
+    const leads=await api('/api/data/leads');
+    document.getElementById('leadList').innerHTML=leads.length? leads.map(l=>
+      '<div class="list-item"><div class="t">'+esc(l.fields['Nombre Lead']||'—')+'</div><div class="m">'+esc(l.fields['Estado Lead']||'')+' · '+fmt(l.fields['Presupuesto Estimado'])+'</div></div>'
+    ).join('') : '<div class="empty">Sin leads</div>';
+  }catch(e){}
+  try{
+    const tasks=await api('/api/data/tasks');
+    document.getElementById('taskList').innerHTML=tasks.length? tasks.map(t=>
+      '<div class="list-item"><div class="t">'+(t.fields.Estado==='Completada'?'✓ ':'')+esc(t.fields.Task||'—')+'</div><div class="m">'+esc(t.fields['Fecha Límite']||t.fields.Estado||'')+'</div></div>'
+    ).join('') : '<div class="empty">Sin tareas</div>';
+  }catch(e){}
+}
+
+document.getElementById('brainGo').onclick=async()=>{
+  const t=document.getElementById('brainInput').value.trim(); if(!t) return;
+  const out=document.getElementById('brainOut'); out.style.display='block'; out.textContent='Pensando…';
+  try{
+    const r=await api('/api/brain',{method:'POST',body:JSON.stringify({text:t})});
+    let txt=r.reply||'';
+    (r.steps||[]).forEach(s=>{ txt+='\n→ '+s.action+': '+s.message; });
+    out.textContent=txt;
+    document.getElementById('brainInput').value='';
+    boot();
+  }catch(e){ out.textContent='Error: '+(e.message||e); }
+};
+
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  b.classList.add('active');
+  document.getElementById('v-'+b.dataset.v).classList.add('on');
+});
+
+if(PW) boot();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+</body>
+</html>
